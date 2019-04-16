@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Rocket.Libraries.Sessions.Constants;
 using Rocket.Libraries.Sessions.Models;
@@ -15,12 +14,13 @@ namespace Rocket.Libraries.Sessions.Services
         private readonly RequestDelegate _next;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly SessionsMiddlewareSettings _sessionManagerSettings;
+        private readonly ResponseWriter _responseWriter = new ResponseWriter();
 
-        public SessionsMiddleware(RequestDelegate next, IHttpClientFactory httpClientFactory, IOptions<SessionsMiddlewareSettings> sessionManagerSettingsOptions)
+        public SessionsMiddleware(RequestDelegate next, IHttpClientFactory httpClientFactory, SessionsMiddlewareSettings sessionsMiddlewareSettings)
         {
             _next = next;
             _httpClientFactory = httpClientFactory;
-            _sessionManagerSettings = sessionManagerSettingsOptions.Value;
+            _sessionManagerSettings = sessionsMiddlewareSettings;
         }
 
         public async Task InvokeAsync(HttpContext httpContext)
@@ -32,8 +32,7 @@ namespace Rocket.Libraries.Sessions.Services
                 var errorMessage = GetRequestValidationErrorsIfAny();
                 if (!string.IsNullOrEmpty(errorMessage))
                 {
-                    httpContext.Response.StatusCode = 500;
-                    await httpContext.Response.WriteAsync(errorMessage);
+                    await _responseWriter.WriteGenericErrorAsync(httpContext, errorMessage);
                     return;
                 }
                 else
@@ -42,13 +41,13 @@ namespace Rocket.Libraries.Sessions.Services
 
                     if (IsValidSession(sessionKey, sessionInformation))
                     {
-                        httpContext.Response.StatusCode = 401;
-                        await httpContext.Response.WriteAsync("Session has expired or does not exist");
-                        return;
+                        LogUtility.Debug($"Session for key '{sessionKey}' verified.");
+                        httpContext.Request.Headers.Add(HeaderNameConstants.SessionInformation, sessionInformation.Value);
                     }
                     else
                     {
-                        httpContext.Request.Headers.Add(HeaderNameConstants.SessionInformation, sessionInformation.Value);
+                        await _responseWriter.WriteAuthenticationErrorAsync(httpContext, $"Your session has expired or is invalid.");
+                        return;
                     }
                 }
             }
@@ -63,11 +62,11 @@ namespace Rocket.Libraries.Sessions.Services
             }
             else if (_sessionManagerSettings == null)
             {
-                return $"Sessions middleware settings not configured. Please add to section 'SessionsMiddleware' in your appsettings.json";
+                return $"Sessions middleware settings not supplied. Cannot figure out how to connect to the sessions server";
             }
             else if (string.IsNullOrEmpty(_sessionManagerSettings.SessionsServerBaseUri))
             {
-                return $"Sessions server base uri not specified. Please add to section 'SessionsMiddleware' in your appsettings.json";
+                return $"Sessions 'SessionsServerBaseUri' not specified. Please supply this value.";
             }
             else
             {
@@ -78,39 +77,62 @@ namespace Rocket.Libraries.Sessions.Services
         private bool IsValidSession(string sessionKey, SessionInformation sessionInformation)
         {
             var sessionInformationIsNull = sessionInformation == null;
-            var sessionDataMissing = sessionInformationIsNull == false && (string.IsNullOrEmpty(sessionInformation.Value) || string.IsNullOrEmpty(sessionInformation.Key));
-            var sessionKeyMismatch = sessionDataMissing == false && sessionInformation.Key.Equals(sessionKey, StringComparison.InvariantCultureIgnoreCase) == false;
-
-            if (sessionInformationIsNull || sessionDataMissing || sessionKeyMismatch)
+            if (sessionInformationIsNull)
             {
+                LogUtility.Debug($"Could not find session with key '{sessionKey}'");
                 return false;
             }
             else
             {
-                return true;
+                var sessionDataMissing = (string.IsNullOrEmpty(sessionInformation.Value) || string.IsNullOrEmpty(sessionInformation.Key));
+                if (sessionDataMissing)
+                {
+                    LogUtility.Debug($"Session data is incomplete");
+                    return false;
+                }
+                else
+                {
+                    var sessionKeyMismatch = sessionDataMissing == false && sessionInformation.Key.Equals(sessionKey, StringComparison.InvariantCultureIgnoreCase) == false;
+                    if (sessionKeyMismatch)
+                    {
+                        LogUtility.Debug($"Supplied session key does not match with key from server");
+                        return false;
+                    }
+                }
             }
+            return true;
         }
 
         private async Task<SessionInformation> GetSessionAsync(string sessionKey)
         {
+            var sessionsServerUrlMinusKey = $"{_sessionManagerSettings.SessionsServerBaseUri}api/v1/repository/get?key=";
+            var sessionsServerUrlIncludingKey = $"{sessionsServerUrlMinusKey}{sessionKey}";
+            LogUtility.Debug($"Sessions Server Call Url: {sessionsServerUrlMinusKey}");
             var requestMessage = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"{_sessionManagerSettings.SessionsServerBaseUri}api/v1/get?key={sessionKey}"
+                sessionsServerUrlIncludingKey
             );
 
             var client = _httpClientFactory.CreateClient();
             var response = await client.SendAsync(requestMessage);
-            var responseString = await response.Content.ReadAsStringAsync();
-            var sessionInformation = JsonConvert.DeserializeObject<SessionInformation>(responseString);
-            return sessionInformation;
+            if (response.IsSuccessStatusCode)
+            {
+                var responseString = await response.Content.ReadAsStringAsync();
+                var sessionServerResponse = JsonConvert.DeserializeObject<ResponseObject<SessionInformation>>(responseString);
+                return sessionServerResponse.Payload;
+            }
+            else
+            {
+                throw new Exception($"Error occured calling the session server. \n\tResponse Code: {response.StatusCode}\n\tMessage: {(await response.Content?.ReadAsStringAsync())}");
+            }
         }
 
         private string GetSessionKey(HttpContext httpContext)
         {
-            var containsHeader = httpContext.Request.Headers.ContainsKey(HeaderNameConstants.SessionName);
+            var containsHeader = httpContext.Request.Headers.ContainsKey(HeaderNameConstants.SessionKey);
             if (containsHeader)
             {
-                return httpContext.Request.Headers[HeaderNameConstants.SessionName].First();
+                return httpContext.Request.Headers[HeaderNameConstants.SessionKey].First();
             }
             else
             {

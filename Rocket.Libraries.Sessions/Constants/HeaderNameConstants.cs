@@ -2,7 +2,7 @@
 {
     internal class HeaderNameConstants
     {
-        public const string SessionName = "x-session-key";
+        public const string SessionKey = "x-session-key";
         public const string SessionInformation = "x-session-information";
     }
 }
