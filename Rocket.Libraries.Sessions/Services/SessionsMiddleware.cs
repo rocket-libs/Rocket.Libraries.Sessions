@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Rocket.Libraries.Sessions.Constants;
 using Rocket.Libraries.Sessions.Models;
+using Rocket.Libraries.Sessions.Services.SessionProvider;
 using System;
 using System.Linq;
 using System.Net.Http;
@@ -13,13 +14,15 @@ namespace Rocket.Libraries.Sessions.Services
     {
         private readonly RequestDelegate _next;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IRocketSessionCache _rocketSessionCache;
         private readonly SessionsMiddlewareSettings _sessionManagerSettings;
         private readonly ResponseWriter _responseWriter = new ResponseWriter();
 
-        public SessionsMiddleware(RequestDelegate next, IHttpClientFactory httpClientFactory, SessionsMiddlewareSettings sessionsMiddlewareSettings)
+        public SessionsMiddleware(RequestDelegate next, IHttpClientFactory httpClientFactory, IRocketSessionCache rocketSessionCache, SessionsMiddlewareSettings sessionsMiddlewareSettings)
         {
             _next = next;
             _httpClientFactory = httpClientFactory;
+            _rocketSessionCache = rocketSessionCache;
             _sessionManagerSettings = sessionsMiddlewareSettings;
         }
 
@@ -42,7 +45,7 @@ namespace Rocket.Libraries.Sessions.Services
                     if (IsValidSession(sessionKey, sessionInformation))
                     {
                         LogUtility.Debug($"Session for key '{sessionKey}' verified.");
-                        httpContext.Request.Headers.Add(HeaderNameConstants.SessionInformation, sessionInformation.Value);
+                        _rocketSessionCache.Session = JsonConvert.DeserializeObject<Session>(sessionInformation.Value);
                     }
                     else
                     {
