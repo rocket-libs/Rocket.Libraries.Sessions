@@ -1,10 +1,8 @@
-﻿using System;
-
-namespace Rocket.Libraries.Sessions.Models
+﻿namespace Rocket.Libraries.Sessions.Models
 {
     public class Session
     {
-        public Guid Key { get; set; }
+        public object Key { get; set; }
 
         public string TimezoneId { get; set; }
 
