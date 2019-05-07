@@ -2,7 +2,6 @@
 using Newtonsoft.Json;
 using Rocket.Libraries.Sessions.Constants;
 using Rocket.Libraries.Sessions.Models;
-using Rocket.Libraries.Sessions.Services.SessionProvider;
 using System;
 using System.Linq;
 using System.Net.Http;
@@ -14,15 +13,13 @@ namespace Rocket.Libraries.Sessions.Services
     {
         private readonly RequestDelegate _next;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IRocketSessionCache _rocketSessionCache;
         private readonly SessionsMiddlewareSettings _sessionManagerSettings;
         private readonly ResponseWriter _responseWriter = new ResponseWriter();
 
-        public SessionsMiddleware(RequestDelegate next, IHttpClientFactory httpClientFactory, IRocketSessionCache rocketSessionCache, SessionsMiddlewareSettings sessionsMiddlewareSettings)
+        public SessionsMiddleware(RequestDelegate next, IHttpClientFactory httpClientFactory, SessionsMiddlewareSettings sessionsMiddlewareSettings)
         {
             _next = next;
             _httpClientFactory = httpClientFactory;
-            _rocketSessionCache = rocketSessionCache;
             _sessionManagerSettings = sessionsMiddlewareSettings;
         }
 
@@ -44,8 +41,8 @@ namespace Rocket.Libraries.Sessions.Services
 
                     if (IsValidSession(sessionKey, sessionInformation))
                     {
-                        LogUtility.Debug($"Session for key '{sessionKey}' verified.");
-                        _rocketSessionCache.Session = JsonConvert.DeserializeObject<Session>(sessionInformation.Value);
+                        httpContext.Request.Headers[HeaderNameConstants.SessionInformation] = sessionInformation.Value;
+                        LogUtility.Debug($"Session for key '{sessionKey}' verified and appended to headers.");
                     }
                     else
                     {
@@ -108,9 +105,24 @@ namespace Rocket.Libraries.Sessions.Services
 
         private async Task<SessionInformation> GetSessionAsync(string sessionKey)
         {
+            var trimmedSessionKey = sessionKey.Trim();
+            var noKey = string.IsNullOrEmpty(trimmedSessionKey);
+            WarnIfKeyMissing(noKey);
+            if (noKey)
+            {
+                return default;
+            }
+            else
+            {
+                return await ReadRepositoryAsync(trimmedSessionKey);
+            }
+        }
+
+        private async Task<SessionInformation> ReadRepositoryAsync(string sessionKey)
+        {
             var sessionsServerUrlMinusKey = $"{_sessionManagerSettings.SessionsServerBaseUri}api/v1/repository/get?key=";
             var sessionsServerUrlIncludingKey = $"{sessionsServerUrlMinusKey}{sessionKey}";
-            LogUtility.Debug($"Sessions Server Call Url: {sessionsServerUrlMinusKey}");
+            LogUtility.Debug($"Sessions Server Call Url: {sessionsServerUrlIncludingKey}");
             var requestMessage = new HttpRequestMessage(
                 HttpMethod.Get,
                 sessionsServerUrlIncludingKey
@@ -127,6 +139,18 @@ namespace Rocket.Libraries.Sessions.Services
             else
             {
                 throw new Exception($"Error occured calling the session server. \n\tResponse Code: {response.StatusCode}\n\tMessage: {(await response.Content?.ReadAsStringAsync())}");
+            }
+        }
+
+        private void WarnIfKeyMissing(bool noKey)
+        {
+            if (noKey)
+            {
+                LogUtility.Warn($"Ignored request without a session key");
+            }
+            else
+            {
+                return;
             }
         }
 
