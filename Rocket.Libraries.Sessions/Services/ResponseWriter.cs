@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
+using Rocket.Libraries.Sessions.Constants;
 using Rocket.Libraries.Sessions.Models;
 using System.Threading.Tasks;
 
@@ -20,20 +21,20 @@ namespace Rocket.Libraries.Sessions.Services
 
         public async Task WriteAuthenticationErrorAsync(HttpContext httpContext, string errorMessage)
         {
-            await WriteErrorAsync(httpContext, errorMessage, 401);
+            await WriteErrorAsync(httpContext, errorMessage, 200, 3);
         }
 
         public async Task WriteGenericErrorAsync(HttpContext httpContext, string errorMessage)
         {
-            await WriteErrorAsync(httpContext, errorMessage, 500);
+            await WriteErrorAsync(httpContext, errorMessage, 500, 2);
         }
 
-        private async Task WriteErrorAsync(HttpContext httpContext, string errorMessage, int httpStatusCode)
+        private async Task WriteErrorAsync(HttpContext httpContext, string errorMessage, int httpStatusCode, int internalCode)
         {
             LogUtility.Error(errorMessage);
             var responseObj = new ResponseObject<string>
             {
-                Code = 2,
+                Code = internalCode,
                 Payload = errorMessage
             };
             await WriteAsync(httpContext, responseObj, httpStatusCode);
@@ -45,6 +46,20 @@ namespace Rocket.Libraries.Sessions.Services
             httpContext.Response.StatusCode = httpStatusCode;
             httpContext.Response.ContentType = "application/json";
             await httpContext.Response.WriteAsync(stringified);
+            AddResponseHeaders(httpContext);
+        }
+
+        private void AddResponseHeaders(HttpContext httpContext)
+        {
+            AddHeader(httpContext, "Access-Control-Allow-Origin", "*");
+            AddHeader(httpContext, "Access-Control-Allow-Headers", $"Authorization, {HeaderNameConstants.SessionInformation}, Origin, {HeaderNameConstants.SessionKey}, Content-Type, Accept, Access-Control-Allow-Request-Method");
+            AddHeader(httpContext, "Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE");
+            AddHeader(httpContext, "Allow", "GET, POST, OPTIONS, PUT, DELETE");
+        }
+
+        private void AddHeader(HttpContext httpContext, string key, string value)
+        {
+            httpContext.Response.Headers[key] = value;
         }
     }
 }
