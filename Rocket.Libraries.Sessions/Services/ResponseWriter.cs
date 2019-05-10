@@ -21,7 +21,7 @@ namespace Rocket.Libraries.Sessions.Services
 
         public async Task WriteAuthenticationErrorAsync(HttpContext httpContext, string errorMessage)
         {
-            await WriteErrorAsync(httpContext, errorMessage, 200, 3);
+            await WriteErrorAsync(httpContext, errorMessage, 401, 3);
         }
 
         public async Task WriteGenericErrorAsync(HttpContext httpContext, string errorMessage)
@@ -45,8 +45,8 @@ namespace Rocket.Libraries.Sessions.Services
             var stringified = JsonConvert.SerializeObject(response);
             httpContext.Response.StatusCode = httpStatusCode;
             httpContext.Response.ContentType = "application/json";
-            await httpContext.Response.WriteAsync(stringified);
             AddResponseHeaders(httpContext);
+            await httpContext.Response.WriteAsync(stringified);
         }
 
         private void AddResponseHeaders(HttpContext httpContext)
