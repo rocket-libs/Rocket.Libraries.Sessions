@@ -37,9 +37,9 @@ namespace Rocket.Libraries.Sessions.Services
                 }
                 else
                 {
-                    var sessionInformation = await GetSessionAsync(sessionKey);
+                    var sessionInformation = await new SessionFetcher(_httpClientFactory, _sessionManagerSettings).GetSessionAsync(sessionKey);
 
-                    if (IsValidSession(sessionKey, sessionInformation))
+                    if (new SessionValidator().IsValidSession(sessionKey, sessionInformation))
                     {
                         httpContext.Request.Headers[HeaderNameConstants.SessionInformation] = sessionInformation.Value;
                         LogUtility.Debug($"Session for key '{sessionKey}' verified and appended to headers.");
@@ -71,86 +71,6 @@ namespace Rocket.Libraries.Sessions.Services
             else
             {
                 return string.Empty;
-            }
-        }
-
-        private bool IsValidSession(string sessionKey, SessionInformation sessionInformation)
-        {
-            var sessionInformationIsNull = sessionInformation == null;
-            if (sessionInformationIsNull)
-            {
-                LogUtility.Debug($"Could not find session with key '{sessionKey}'");
-                return false;
-            }
-            else
-            {
-                var sessionDataMissing = (string.IsNullOrEmpty(sessionInformation.Value) || string.IsNullOrEmpty(sessionInformation.Key));
-                if (sessionDataMissing)
-                {
-                    LogUtility.Debug($"Session data is incomplete");
-                    return false;
-                }
-                else
-                {
-                    var sessionKeyMismatch = sessionDataMissing == false && sessionInformation.Key.Equals(sessionKey, StringComparison.InvariantCultureIgnoreCase) == false;
-                    if (sessionKeyMismatch)
-                    {
-                        LogUtility.Debug($"Supplied session key does not match with key from server");
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-
-        private async Task<SessionInformation> GetSessionAsync(string sessionKey)
-        {
-            var trimmedSessionKey = sessionKey.Trim();
-            var noKey = string.IsNullOrEmpty(trimmedSessionKey);
-            WarnIfKeyMissing(noKey);
-            if (noKey)
-            {
-                return default;
-            }
-            else
-            {
-                return await ReadRepositoryAsync(trimmedSessionKey);
-            }
-        }
-
-        private async Task<SessionInformation> ReadRepositoryAsync(string sessionKey)
-        {
-            var sessionsServerUrlMinusKey = $"{_sessionManagerSettings.SessionsServerBaseUri}api/v1/repository/get?key=";
-            var sessionsServerUrlIncludingKey = $"{sessionsServerUrlMinusKey}{sessionKey}";
-            LogUtility.Debug($"Sessions Server Call Url: {sessionsServerUrlIncludingKey}");
-            var requestMessage = new HttpRequestMessage(
-                HttpMethod.Get,
-                sessionsServerUrlIncludingKey
-            );
-
-            var client = _httpClientFactory.CreateClient();
-            var response = await client.SendAsync(requestMessage);
-            if (response.IsSuccessStatusCode)
-            {
-                var responseString = await response.Content.ReadAsStringAsync();
-                var sessionServerResponse = JsonConvert.DeserializeObject<ResponseObject<SessionInformation>>(responseString);
-                return sessionServerResponse.Payload;
-            }
-            else
-            {
-                throw new Exception($"Error occured calling the session server. \n\tResponse Code: {response.StatusCode}\n\tMessage: {(await response.Content?.ReadAsStringAsync())}");
-            }
-        }
-
-        private void WarnIfKeyMissing(bool noKey)
-        {
-            if (noKey)
-            {
-                LogUtility.Warn($"Ignored request without a session key");
-            }
-            else
-            {
-                return;
             }
         }
 
