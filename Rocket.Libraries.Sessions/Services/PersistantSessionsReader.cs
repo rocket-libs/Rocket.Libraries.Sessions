@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using Rocket.Libraries.Sessions.Models;
 using System;
 using System.Collections.Generic;
@@ -14,10 +15,10 @@ namespace Rocket.Libraries.Sessions.Services
         private readonly SessionsMiddlewareSettings _sessionsMiddlewareSettings;
         private List<Session> _persistantSessions;
 
-        public PersistantSessionsReader(IHttpClientFactory httpClientFactory, SessionsMiddlewareSettings sessionsMiddlewareSettings)
+        public PersistantSessionsReader(IHttpClientFactory httpClientFactory, IOptions<SessionsMiddlewareSettings> sessionsMiddlewareSettings)
         {
             _httpClientFactory = httpClientFactory;
-            _sessionsMiddlewareSettings = sessionsMiddlewareSettings;
+            _sessionsMiddlewareSettings = sessionsMiddlewareSettings.Value;
         }
 
         public async Task<List<Session>> GetPersistantTokensAsync()
