@@ -14,6 +14,7 @@ namespace Rocket.Libraries.Sessions.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly SessionsMiddlewareSettings _sessionsMiddlewareSettings;
         private List<Session> _persistantSessions;
+        private readonly object locker = new object();
 
         public PersistantSessionsReader(IHttpClientFactory httpClientFactory, IOptions<SessionsMiddlewareSettings> sessionsMiddlewareSettings)
         {
@@ -35,25 +36,28 @@ namespace Rocket.Libraries.Sessions.Services
 
         private async Task<List<Session>> FetchSessionsAsync()
         {
-            var persistantKeysMissing = _sessionsMiddlewareSettings.PersistantKeys?.Count == 0;
-            if (persistantKeysMissing)
+            lock (locker)
             {
-                return null;
-            }
-            else
-            {
-                _persistantSessions = new List<Session>();
-                var sessionFetcher = new SessionFetcher(_httpClientFactory, _sessionsMiddlewareSettings);
-                var sessionValidator = new SessionValidator();
-                foreach (var persistantKey in _sessionsMiddlewareSettings.PersistantKeys)
+                var persistantKeysMissing = _sessionsMiddlewareSettings.PersistantKeys?.Count == 0;
+                if (persistantKeysMissing)
                 {
-                    var sessionInformation = await sessionFetcher.GetSessionAsync(persistantKey);
-                    if (sessionValidator.IsValidSession(persistantKey, sessionInformation))
-                    {
-                        _persistantSessions.Add(JsonConvert.DeserializeObject<Session>(sessionInformation.Value));
-                    }
+                    return null;
                 }
-                return _persistantSessions;
+                else
+                {
+                    _persistantSessions = new List<Session>();
+                    var sessionFetcher = new SessionFetcher(_httpClientFactory, _sessionsMiddlewareSettings);
+                    var sessionValidator = new SessionValidator();
+                    foreach (var persistantKey in _sessionsMiddlewareSettings.PersistantKeys)
+                    {
+                        var sessionInformation = sessionFetcher.GetSessionAsync(persistantKey).GetAwaiter().GetResult();
+                        if (sessionValidator.IsValidSession(persistantKey, sessionInformation))
+                        {
+                            _persistantSessions.Add(JsonConvert.DeserializeObject<Session>(sessionInformation.Value));
+                        }
+                    }
+                    return _persistantSessions;
+                }
             }
         }
     }
