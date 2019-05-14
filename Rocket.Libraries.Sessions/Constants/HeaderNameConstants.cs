@@ -1,6 +1,6 @@
 ﻿namespace Rocket.Libraries.Sessions.Constants
 {
-    internal class HeaderNameConstants
+    public class HeaderNameConstants
     {
         public const string SessionKey = "x-session-key";
 
