@@ -29,27 +29,44 @@ namespace Rocket.Libraries.Sessions.Services
         public async Task InvokeAsync(HttpContext httpContext)
         {
             LogUtility.Debug($"Processing path: {httpContext.Request.Path.Value}");
+            try
+            {
+                var sessionInfoRequired = NotOptionsCall(httpContext);
+                if (sessionInfoRequired)
+                {
+                    await InjectSessionInformation(httpContext);
+                }
+                await _next.Invoke(httpContext);
+            }
+            catch (Exception e)
+            {
+                await _responseWriter.WriteAuthenticationErrorAsync(httpContext, e.Message);
+                return;
+            }
+        }
+
+        private async Task InjectSessionInformation(HttpContext httpContext)
+        {
+            var sessionReader = GetSessionReaderToUse(httpContext);
+            if (sessionReader == null)
+            {
+                throw new Exception($"Could not determine what session reader to use for path {httpContext.Request.Path.Value}");
+            }
+            LogUtility.Debug($"Using session reader '{sessionReader.GetType().Name}'");
+            httpContext.Request.Headers[HeaderNameConstants.SessionInformation] = await sessionReader.ReadAsync(httpContext, _sessionManagerSettings);
+            LogUtility.Debug($"Session appended to headers.");
+        }
+
+        private ISessionReader GetSessionReaderToUse(HttpContext httpContext)
+        {
             foreach (var sessionReader in _sessionReaders)
             {
                 if (sessionReader.UseThisReader(httpContext, _sessionManagerSettings))
                 {
-                    try
-                    {
-                        LogUtility.Debug($"Using session reader '{sessionReader.GetType().Name}'");
-                        httpContext.Request.Headers[HeaderNameConstants.SessionInformation] = await sessionReader.ReadAsync(httpContext, _sessionManagerSettings);
-                        LogUtility.Debug($"Session appended to headers.");
-                        await _next.Invoke(httpContext);
-                        return;
-                    }
-                    catch (Exception e)
-                    {
-                        await _responseWriter.WriteAuthenticationErrorAsync(httpContext, e.Message);
-                        return;
-                    }
+                    return sessionReader;
                 }
             }
-            await _responseWriter.WriteAuthenticationErrorAsync(httpContext, "Could not determine what session reader to use");
-            return;
+            return null;
         }
 
         private void InitializeSessionReaders()
@@ -59,6 +76,13 @@ namespace Rocket.Libraries.Sessions.Services
                 new Impersonator(),
                 new HeaderSessionReader(_httpClientFactory,_sessionManagerSettings),
             };
+        }
+
+        private bool NotOptionsCall(HttpContext httpContext)
+        {
+            var isOptions = httpContext.Request.Method.Equals("Options", StringComparison.InvariantCultureIgnoreCase);
+            var notOptions = isOptions == false;
+            return notOptions;
         }
     }
 }

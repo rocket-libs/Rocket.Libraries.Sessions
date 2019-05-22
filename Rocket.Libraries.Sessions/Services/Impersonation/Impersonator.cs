@@ -36,7 +36,7 @@ namespace Rocket.Libraries.Sessions.Services
                 else
                 {
                     var candidateSessions = sessionManagerSettings.ImpersonationInformation.ImpersonationSessions.Where(a => a.Key.Equals(pathImpersonationEntry.ImpersonationSessionKey)).ToList();
-                    if (candidateSessions.Count > 0)
+                    if (candidateSessions.Count > 1)
                     {
                         throw new Exception($"{candidateSessions.Count} impersonation sessions with the key '{pathImpersonationEntry.ImpersonationSessionKey}' were found while only one is expected.");
                     }
