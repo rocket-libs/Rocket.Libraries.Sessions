@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Rocket.Libraries.Sessions.Models.Settings;
+using System.Collections.Generic;
 
 namespace Rocket.Libraries.Sessions.Models
 {
@@ -6,5 +7,7 @@ namespace Rocket.Libraries.Sessions.Models
     {
         public string SessionsServerBaseUri { get; set; }
         public List<string> PersistantKeys { get; set; }
+
+        public ImpersonationInformation ImpersonationInformation { get; set; }
     }
 }

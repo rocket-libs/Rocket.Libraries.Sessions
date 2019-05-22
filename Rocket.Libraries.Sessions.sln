@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.136
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28803.452
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rocket.Libraries.Sessions", "Rocket.Libraries.Sessions\Rocket.Libraries.Sessions.csproj", "{58BB7576-144F-4AF6-BD2C-2FE1AFC247E7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rocket.Libraries.Sessions", "Rocket.Libraries.Sessions\Rocket.Libraries.Sessions.csproj", "{58BB7576-144F-4AF6-BD2C-2FE1AFC247E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rocket.Libraries.SessionsTests", "Rocket.Libraries.SessionsTests\Rocket.Libraries.SessionsTests.csproj", "{4330FB67-7AF1-4AC8-8986-F979B87810FB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{58BB7576-144F-4AF6-BD2C-2FE1AFC247E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{58BB7576-144F-4AF6-BD2C-2FE1AFC247E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{58BB7576-144F-4AF6-BD2C-2FE1AFC247E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4330FB67-7AF1-4AC8-8986-F979B87810FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4330FB67-7AF1-4AC8-8986-F979B87810FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4330FB67-7AF1-4AC8-8986-F979B87810FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4330FB67-7AF1-4AC8-8986-F979B87810FB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
