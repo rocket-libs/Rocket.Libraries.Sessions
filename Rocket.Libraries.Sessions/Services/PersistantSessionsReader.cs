@@ -30,11 +30,11 @@ namespace Rocket.Libraries.Sessions.Services
             }
             else
             {
-                return await FetchSessionsAsync();
+                return await Task.Run(() => FetchSession());
             }
         }
 
-        private async Task<List<Session>> FetchSessionsAsync()
+        private List<Session> FetchSession()
         {
             lock (locker)
             {
