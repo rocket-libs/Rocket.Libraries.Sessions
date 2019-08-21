@@ -31,7 +31,7 @@ namespace Rocket.Libraries.Sessions.Services
                 var hasImpersonationSessions = sessionManagerSettings.ImpersonationInformation?.ImpersonationSessions?.Count > 0;
                 if (hasImpersonationSessions == false)
                 {
-                    throw new Exception($"Impersonation requested but now impersonation sessions specified");
+                    throw new Exception($"Impersonation requested but no impersonation sessions specified");
                 }
                 else
                 {
