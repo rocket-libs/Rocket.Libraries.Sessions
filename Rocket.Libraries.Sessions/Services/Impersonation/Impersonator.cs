@@ -68,7 +68,7 @@ namespace Rocket.Libraries.Sessions.Services
             if (hasImpersonationList && httpContext.Request.Path.HasValue)
             {
                 var currentPath = httpContext.Request.Path.Value;
-                var matches = sessionManagerSettings.ImpersonationInformation.EndpointPaths.Where(a => a.Path.Equals(currentPath, StringComparison.InvariantCultureIgnoreCase)).ToList();
+                var matches = GetImpersonationMatches(httpContext, sessionManagerSettings, currentPath);
                 if (matches.Count > 1)
                 {
                     throw new Exception($"Found {matches.Count} impersonation entries for '{currentPath}'. Only one entry per path is allowed");
@@ -85,6 +85,41 @@ namespace Rocket.Libraries.Sessions.Services
             else
             {
                 return null;
+            }
+        }
+
+        private List<EndpointPath> GetImpersonationMatches(HttpContext httpContext, SessionsMiddlewareSettings sessionManagerSettings, string currentPath)
+        {
+            var exactMatches = sessionManagerSettings.ImpersonationInformation.EndpointPaths.Where(a => a.Path.Equals(currentPath, StringComparison.InvariantCultureIgnoreCase)).ToList();
+            var hasExactMatches = exactMatches.Count > 0;
+            if (hasExactMatches)
+            {
+                return exactMatches;
+            }
+            else
+            {
+                var wildCardMatches = GetWildCardImpersonationMatchesIfRequired(httpContext, sessionManagerSettings, currentPath).ToList();
+                return wildCardMatches;
+            }
+        }
+
+        private IEnumerable<EndpointPath> GetWildCardImpersonationMatchesIfRequired(HttpContext httpContext, SessionsMiddlewareSettings sessionManagerSettings, string currentPath)
+        {
+            const string wildCardSpecifier = "/*";
+
+            var wildCardImpersonations = sessionManagerSettings.ImpersonationInformation.EndpointPaths.Where(a => a.Path.EndsWith(wildCardSpecifier)).ToList();
+            foreach (var item in wildCardImpersonations)
+            {
+                var nonWildCardPart = item.Path.Substring(0, wildCardSpecifier.Length);
+                var canBeTested = currentPath.Length >= nonWildCardPart.Length;
+                if (canBeTested)
+                {
+                    var isMatch = currentPath.Substring(0, nonWildCardPart.Length).Equals(nonWildCardPart, StringComparison.InvariantCultureIgnoreCase);
+                    if (isMatch)
+                    {
+                        yield return item;
+                    }
+                }
             }
         }
     }
