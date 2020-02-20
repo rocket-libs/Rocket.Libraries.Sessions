@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Rocket.Libraries.Sessions.Constants;
@@ -13,6 +11,7 @@ namespace Rocket.Libraries.Sessions.Services
     internal class HeaderSessionReader : ISessionReader
     {
         private readonly IHttpClientFactory _httpClientFactory;
+
         private readonly SessionsMiddlewareSettings _sessionsMiddlewareSetting;
 
         public HeaderSessionReader(IHttpClientFactory httpClientFactory, SessionsMiddlewareSettings sessionsMiddlewareSetting)

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Rocket.Libraries.Sessions.Models.Settings
+﻿namespace Rocket.Libraries.Sessions.Models.Settings
 {
     public class EndpointPath
     {

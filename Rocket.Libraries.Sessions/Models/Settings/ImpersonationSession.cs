@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Rocket.Libraries.Sessions.Models.Settings
+﻿namespace Rocket.Libraries.Sessions.Models.Settings
 {
     public class ImpersonationSession
     {
         public object UserId { get; set; }
+
         public object CompanyId { get; set; }
 
         public string Key { get; set; }
