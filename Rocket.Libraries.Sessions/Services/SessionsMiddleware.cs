@@ -1,10 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Newtonsoft.Json;
 using Rocket.Libraries.Sessions.Constants;
 using Rocket.Libraries.Sessions.Models;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -13,9 +11,13 @@ namespace Rocket.Libraries.Sessions.Services
     public class SessionsMiddleware
     {
         private readonly RequestDelegate _next;
+
         private readonly IHttpClientFactory _httpClientFactory;
+
         private readonly SessionsMiddlewareSettings _sessionManagerSettings;
+
         private readonly ResponseWriter _responseWriter = new ResponseWriter();
+
         private List<ISessionReader> _sessionReaders;
 
         public SessionsMiddleware(RequestDelegate next, IHttpClientFactory httpClientFactory, SessionsMiddlewareSettings sessionsMiddlewareSettings)

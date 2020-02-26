@@ -3,9 +3,6 @@ using Newtonsoft.Json;
 using Rocket.Libraries.Sessions.Constants;
 using Rocket.Libraries.Sessions.Exceptions;
 using Rocket.Libraries.Sessions.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Rocket.Libraries.Sessions.Extensions
 {

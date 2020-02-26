@@ -1,10 +1,8 @@
 ﻿using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Rocket.Libraries.Sessions.Models;
-using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Rocket.Libraries.Sessions.Services
@@ -12,8 +10,11 @@ namespace Rocket.Libraries.Sessions.Services
     public class PersistantSessionsReader : IPersistantSessionsReader
     {
         private readonly IHttpClientFactory _httpClientFactory;
+
         private readonly SessionsMiddlewareSettings _sessionsMiddlewareSettings;
+
         private List<Session> _persistantSessions;
+
         private readonly object locker = new object();
 
         public PersistantSessionsReader(IHttpClientFactory httpClientFactory, IOptions<SessionsMiddlewareSettings> sessionsMiddlewareSettings)
