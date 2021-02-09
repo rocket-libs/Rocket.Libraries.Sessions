@@ -5,8 +5,8 @@ using System.Text;
 
 namespace Rocket.Libraries.Sessions.SessionInjection
 {
-    public interface ISessionInjector
+    public interface ISessionInjector<TIdentifier>
     {
-        string GetSessionSerialized { get; }
+        void InjectSession(TypeableSession<TIdentifier> session);
     }
 }
