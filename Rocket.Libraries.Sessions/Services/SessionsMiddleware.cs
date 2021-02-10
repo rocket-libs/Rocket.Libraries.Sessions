@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Rocket.Libraries.Sessions.Constants;
 using Rocket.Libraries.Sessions.Models;
+using Rocket.Libraries.Sessions.SessionInjection;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -10,13 +11,13 @@ namespace Rocket.Libraries.Sessions.Services
 {
     public class SessionsMiddleware
     {
-        private readonly RequestDelegate _next;
-
         private readonly IHttpClientFactory _httpClientFactory;
 
-        private readonly SessionsMiddlewareSettings _sessionManagerSettings;
+        private readonly RequestDelegate _next;
 
         private readonly ResponseWriter _responseWriter = new ResponseWriter();
+
+        private readonly SessionsMiddlewareSettings _sessionManagerSettings;
 
         private List<ISessionReader> _sessionReaders;
 
@@ -47,18 +48,6 @@ namespace Rocket.Libraries.Sessions.Services
             }
         }
 
-        private async Task InjectSessionInformation(HttpContext httpContext)
-        {
-            var sessionReader = GetSessionReaderToUse(httpContext);
-            if (sessionReader == null)
-            {
-                throw new Exception($"Could not determine what session reader to use for path {httpContext.Request.Path.Value}");
-            }
-            LogUtility.Debug($"Using session reader '{sessionReader.GetType().Name}'");
-            httpContext.Request.Headers[HeaderNameConstants.SessionInformation] = await sessionReader.ReadAsync(httpContext, _sessionManagerSettings);
-            LogUtility.Debug($"Session appended to headers.");
-        }
-
         private ISessionReader GetSessionReaderToUse(HttpContext httpContext)
         {
             foreach (var sessionReader in _sessionReaders)
@@ -76,8 +65,21 @@ namespace Rocket.Libraries.Sessions.Services
             _sessionReaders = new List<ISessionReader>
             {
                 new Impersonator(),
+                new InjectedSessionReader(),
                 new HeaderSessionReader(_httpClientFactory,_sessionManagerSettings),
             };
+        }
+
+        private async Task InjectSessionInformation(HttpContext httpContext)
+        {
+            var sessionReader = GetSessionReaderToUse(httpContext);
+            if (sessionReader == null)
+            {
+                throw new Exception($"Could not determine what session reader to use for path {httpContext.Request.Path.Value}");
+            }
+            LogUtility.Debug($"Using session reader '{sessionReader.GetType().Name}'");
+            httpContext.Request.Headers[HeaderNameConstants.SessionInformation] = await sessionReader.ReadAsync(httpContext, _sessionManagerSettings);
+            LogUtility.Debug($"Session appended to headers.");
         }
 
         private bool NotOptionsCall(HttpContext httpContext)
